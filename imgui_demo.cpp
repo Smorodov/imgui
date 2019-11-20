@@ -1352,6 +1352,8 @@ static void ShowDemoWindowWidgets()
         static ImS64  s64_v = -1;
         static ImU64  u64_v = (ImU64)-1;
         static float  f32_v = 0.123f;
+        static float  f32_x = 0;
+        static float  f32_y = 0;
         static double f64_v = 90000.01234567890123456789;
 
         const float drag_speed = 0.2f;
@@ -1394,7 +1396,7 @@ static void ShowDemoWindowWidgets()
         ImGui::SliderScalar("slider double low",  ImGuiDataType_Double, &f64_v, &f64_zero, &f64_one,  "%.10f grams", 1.0f);
         ImGui::SliderScalar("slider double low^2",ImGuiDataType_Double, &f64_v, &f64_zero, &f64_one,  "%.10f", 2.0f);
         ImGui::SliderScalar("slider double high", ImGuiDataType_Double, &f64_v, &f64_lo_a, &f64_hi_a, "%e grams", 1.0f);
-
+        ImGui::JoysticWidget("Joystick", ImVec2(160, 160), 20, &f32_x, &f32_y, ImVec2(-1, -1), ImVec2(1, 1), true, true);
         static bool inputs_step = true;
         ImGui::Text("Inputs");
         ImGui::Checkbox("Show step buttons", &inputs_step);

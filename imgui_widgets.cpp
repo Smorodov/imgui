@@ -2742,6 +2742,132 @@ bool ImGui::VSliderInt(const char* label, const ImVec2& size, int* v, int v_min,
     return VSliderScalar(label, size, ImGuiDataType_S32, v, &v_min, &v_max, format);
 }
 
+// 2D slider widget
+// label - text ID
+// size - widget size
+// grabRadius - grab radius
+// x and y - are current values
+// minBound and maxBound - min and max values
+// en_x and en_y are flags for enable/block x and y axis
+bool ImGui::JoysticWidget(const char* label, ImVec2 size, float grabRadius, float* x, float* y, ImVec2 minBound, ImVec2 maxBound, bool en_x, bool en_y)
+{
+    ImVec2 range = maxBound - minBound;
+    float abs_range_scale_x = size.x - 2 * grabRadius;
+    float abs_range_scale_y = size.y - 2 * grabRadius;
+
+    float norm_x = (*x - minBound.x) / range.x;
+    float norm_y = -(*y - minBound.y) / range.y;
+
+    float grab_pos_x = norm_x * abs_range_scale_x+minBound.x / range.x * abs_range_scale_x;
+    float grab_pos_y = minBound.y / range.y * abs_range_scale_y-norm_y * abs_range_scale_y;
+
+
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    ImGuiContext& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+    const ImGuiID id = window->GetID(label);
+    const ImVec2 label_size = CalcTextSize(label, NULL, true);
+    const ImVec2 pos = window->DC.CursorPos;
+
+    ImRect bb = ImRect(pos, pos + size);
+
+    ImRect sz = ImRect(pos, pos + size + ImVec2(0, 2 * label_size.y));
+    ItemSize(sz, style.FramePadding.y);
+    if (!ItemAdd(bb, id))
+        return false;
+
+    // Handle input right away. None of the code of Begin() is relying on scrolling position before calling Scrollbar().
+    bool held = false;
+    bool hovered = false;
+    ButtonBehavior(bb, id, &hovered, &held, ImGuiButtonFlags_NoNavFocus);
+    float mouse_pos_h = grab_pos_x;
+    float mouse_pos_v = grab_pos_y;
+
+    if (held)
+    {
+        mouse_pos_h = g.IO.MousePos.x - bb.Min.x - bb.GetWidth() * 0.5f;
+        mouse_pos_v = g.IO.MousePos.y - bb.Min.y - bb.GetHeight() * 0.5f;
+
+        if (mouse_pos_h < grabRadius - bb.GetWidth() * 0.5f)
+        {
+            mouse_pos_h = grabRadius - bb.GetWidth() * 0.5f;
+        }
+        if (mouse_pos_h > bb.GetWidth() * 0.5f - grabRadius)
+        {
+            mouse_pos_h = bb.GetWidth() * 0.5f - grabRadius;
+        }
+        if (mouse_pos_v < grabRadius - bb.GetHeight() * 0.5f)
+        {
+            mouse_pos_v = grabRadius - bb.GetHeight() * 0.5f;
+        }
+        if (mouse_pos_v > bb.GetHeight() * 0.5f - grabRadius)
+        {
+            mouse_pos_v = bb.GetHeight() * 0.5f - grabRadius;
+        }
+        SetHoveredID(id);
+        bool seek_absolute = false;
+        if (g.ActiveIdIsJustActivated)
+        {
+
+        }
+        norm_x = mouse_pos_h / abs_range_scale_x - minBound.x / range.x;
+        norm_y = minBound.y / range.y -mouse_pos_v / abs_range_scale_y;
+
+        *x = norm_x * range.x + minBound.x;
+        *y = -norm_y * range.y + minBound.y;
+    }
+
+    if (!en_x)
+    {
+        *x = 0;
+    }
+
+    if (!en_y)
+    {
+        *y = 0;
+    }
+
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    const ImU32 col = GetColorU32(held ? ImGuiCol_ScrollbarGrabActive : hovered ? ImGuiCol_ScrollbarGrabHovered : ImGuiCol_ScrollbarGrab, 1);
+    RenderNavHighlight(bb, id);    
+    RenderFrame(bb.Min, bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
+
+    if (en_x)
+    {
+        draw_list->AddLine(ImVec2(bb.Min.x, pos.y + bb.GetHeight() * 0.5f), ImVec2(bb.Max.x, pos.y + bb.GetHeight() * 0.5f), col, 1);
+    }
+    else
+    {
+        mouse_pos_h = 0;
+    }
+    if (en_y)
+    {
+        draw_list->AddLine(ImVec2(pos.x + bb.GetWidth() * 0.5f, bb.Min.y), ImVec2(pos.x + bb.GetWidth() * 0.5f, bb.Max.y), col, 1);
+    }
+    else
+    {
+        mouse_pos_v = 0;
+    }
+    draw_list->AddCircleFilled(ImVec2(pos.x + bb.GetWidth() * 0.5f + mouse_pos_h, pos.y + bb.GetHeight() * 0.5f + mouse_pos_v), grabRadius, col, 60);
+    //window->DrawList->AddRectFilled(bb.Max - ImVec2(bb.GetWidth(), 0), bb.Max + ImVec2(0, 2 * label_size.y + style.FramePadding.y), GetColorU32(ImVec4(0, 0, 1, 1)));
+    if (held)
+    {
+        SetTooltip("%8.4g:%8.4g", *x, *y);
+    }
+    char str_x[255] = { 0 };
+    char str_y[255] = { 0 };
+    sprintf(str_x, "dx=%.4f", *x);
+    sprintf(str_y, "dy=%.4f", *y);
+    RenderText(ImVec2(bb.Min.x + style.ItemInnerSpacing.x, bb.Max.y + style.FramePadding.y), str_x);
+    RenderText(ImVec2(bb.Min.x + style.ItemInnerSpacing.x, bb.Max.y + label_size.y + style.FramePadding.y), str_y);
+    return false;
+}
+
+
+
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: InputScalar, InputFloat, InputInt, etc.
 //-------------------------------------------------------------------------
