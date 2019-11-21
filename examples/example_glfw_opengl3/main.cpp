@@ -157,6 +157,12 @@ int main(int, char**)
             ImGui::Text("counter = %d", counter);
 
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+
+            static float  f32_x = 0;
+            static float  f32_y = 0;
+            ImGui::JoysticWidget("Joystick", ImVec2(160, 160), 20, &f32_x, &f32_y, ImVec2(-1, 0), ImVec2(1, 3), true, true);    
+
             ImGui::End();
         }
 

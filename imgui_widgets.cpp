@@ -2751,30 +2751,31 @@ bool ImGui::VSliderInt(const char* label, const ImVec2& size, int* v, int v_min,
 // en_x and en_y are flags for enable/block x and y axis
 bool ImGui::JoysticWidget(const char* label, ImVec2 size, float grabRadius, float* x, float* y, ImVec2 minBound, ImVec2 maxBound, bool en_x, bool en_y)
 {
-    ImVec2 range = maxBound - minBound;
+
     float abs_range_scale_x = size.x - 2 * grabRadius;
     float abs_range_scale_y = size.y - 2 * grabRadius;
 
-    float norm_x = (*x - minBound.x) / range.x;
-    float norm_y = -(*y - minBound.y) / range.y;
+    ImVec2 range = maxBound - minBound;
+    float norm_x = (*x - minBound.x) / range.x - 0.5;
+    float norm_y = (*y - minBound.y) / range.y - 0.5;
 
-    float grab_pos_x = norm_x * abs_range_scale_x+minBound.x / range.x * abs_range_scale_x;
-    float grab_pos_y = minBound.y / range.y * abs_range_scale_y-norm_y * abs_range_scale_y;
+    float grab_pos_x = norm_x * abs_range_scale_x;
+    float grab_pos_y = norm_y * abs_range_scale_y;
 
-
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     if (window->SkipItems)
         return false;
 
-    ImGuiContext& g = *GImGui;
+
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
     const ImVec2 pos = window->DC.CursorPos;
 
     ImRect bb = ImRect(pos, pos + size);
-
     ImRect sz = ImRect(pos, pos + size + ImVec2(0, 2 * label_size.y));
+
     ItemSize(sz, style.FramePadding.y);
     if (!ItemAdd(bb, id))
         return false;
@@ -2783,41 +2784,43 @@ bool ImGui::JoysticWidget(const char* label, ImVec2 size, float grabRadius, floa
     bool held = false;
     bool hovered = false;
     ButtonBehavior(bb, id, &hovered, &held, ImGuiButtonFlags_NoNavFocus);
-    float mouse_pos_h = grab_pos_x;
-    float mouse_pos_v = grab_pos_y;
+
+    float mouse_pos_x = grab_pos_x;
+    float mouse_pos_y = grab_pos_y;
 
     if (held)
     {
-        mouse_pos_h = g.IO.MousePos.x - bb.Min.x - bb.GetWidth() * 0.5f;
-        mouse_pos_v = g.IO.MousePos.y - bb.Min.y - bb.GetHeight() * 0.5f;
+        mouse_pos_x = g.IO.MousePos.x - bb.Min.x - bb.GetWidth() * 0.5f;
+        mouse_pos_y = g.IO.MousePos.y - bb.Min.y - bb.GetHeight() * 0.5f;
 
-        if (mouse_pos_h < grabRadius - bb.GetWidth() * 0.5f)
+        if (mouse_pos_x < grabRadius - bb.GetWidth() * 0.5f)
         {
-            mouse_pos_h = grabRadius - bb.GetWidth() * 0.5f;
+            mouse_pos_x = grabRadius - bb.GetWidth() * 0.5f;
         }
-        if (mouse_pos_h > bb.GetWidth() * 0.5f - grabRadius)
+        if (mouse_pos_x > bb.GetWidth() * 0.5f - grabRadius)
         {
-            mouse_pos_h = bb.GetWidth() * 0.5f - grabRadius;
+            mouse_pos_x = bb.GetWidth() * 0.5f - grabRadius;
         }
-        if (mouse_pos_v < grabRadius - bb.GetHeight() * 0.5f)
+        if (mouse_pos_y < grabRadius - bb.GetHeight() * 0.5f)
         {
-            mouse_pos_v = grabRadius - bb.GetHeight() * 0.5f;
+            mouse_pos_y = grabRadius - bb.GetHeight() * 0.5f;
         }
-        if (mouse_pos_v > bb.GetHeight() * 0.5f - grabRadius)
+        if (mouse_pos_y > bb.GetHeight() * 0.5f - grabRadius)
         {
-            mouse_pos_v = bb.GetHeight() * 0.5f - grabRadius;
+            mouse_pos_y = bb.GetHeight() * 0.5f - grabRadius;
         }
+
         SetHoveredID(id);
         bool seek_absolute = false;
         if (g.ActiveIdIsJustActivated)
         {
 
         }
-        norm_x = mouse_pos_h / abs_range_scale_x - minBound.x / range.x;
-        norm_y = minBound.y / range.y -mouse_pos_v / abs_range_scale_y;
+        norm_x = mouse_pos_x / abs_range_scale_x+0.5;
+        norm_y = mouse_pos_y / abs_range_scale_y+0.5;
 
         *x = norm_x * range.x + minBound.x;
-        *y = -norm_y * range.y + minBound.y;
+        *y = norm_y * range.y + minBound.y;
     }
 
     if (!en_x)
@@ -2832,7 +2835,7 @@ bool ImGui::JoysticWidget(const char* label, ImVec2 size, float grabRadius, floa
 
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     const ImU32 col = GetColorU32(held ? ImGuiCol_ScrollbarGrabActive : hovered ? ImGuiCol_ScrollbarGrabHovered : ImGuiCol_ScrollbarGrab, 1);
-    RenderNavHighlight(bb, id);    
+    RenderNavHighlight(bb, id);
     RenderFrame(bb.Min, bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
 
     if (en_x)
@@ -2841,7 +2844,7 @@ bool ImGui::JoysticWidget(const char* label, ImVec2 size, float grabRadius, floa
     }
     else
     {
-        mouse_pos_h = 0;
+        mouse_pos_x = 0;
     }
     if (en_y)
     {
@@ -2849,9 +2852,9 @@ bool ImGui::JoysticWidget(const char* label, ImVec2 size, float grabRadius, floa
     }
     else
     {
-        mouse_pos_v = 0;
+        mouse_pos_y = 0;
     }
-    draw_list->AddCircleFilled(ImVec2(pos.x + bb.GetWidth() * 0.5f + mouse_pos_h, pos.y + bb.GetHeight() * 0.5f + mouse_pos_v), grabRadius, col, 60);
+    draw_list->AddCircleFilled(ImVec2(pos.x + bb.GetWidth() * 0.5f + mouse_pos_x, pos.y + bb.GetHeight() * 0.5f + mouse_pos_y), grabRadius, col, 60);
     //window->DrawList->AddRectFilled(bb.Max - ImVec2(bb.GetWidth(), 0), bb.Max + ImVec2(0, 2 * label_size.y + style.FramePadding.y), GetColorU32(ImVec4(0, 0, 1, 1)));
     if (held)
     {
